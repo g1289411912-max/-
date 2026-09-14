@@ -1,0 +1,15 @@
+{
+  "name": "德语背单词助手",
+  "short_name": "德语背单词",
+  "description": "德语单词 + 语法笔记，支持三层错题本、笔记、任务、计时搭积木",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
