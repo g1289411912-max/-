@@ -323,6 +323,7 @@ body{touch-action:manipulation;}
         <button class="btn ghost" id="btnNoteList">📝 我的笔记</button>
         <button class="btn ghost" id="btnGrammar">语法检测</button>
         <button class="btn ghost" id="btnSync">☁️ 同步数据</button>
+        <button class="btn ghost" id="btnVoice">🔊 语音诊断</button>
         <button class="btn ghost" id="btnAudit">词表体检</button>
         <button class="btn ghost" id="btnReset">重置进度</button>
       </div>
@@ -515,6 +516,16 @@ body{touch-action:manipulation;}
       <button class="btn primary" id="btnDoDet">导入</button>
       <button class="btn ghost" id="btnClearDet">清除解析词表</button>
       <button class="btn ghost" id="btnCloseDet">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="voiceDiagModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>🔊 语音诊断</h3>
+    <div id="voiceDiagBody"></div>
+    <div class="actions">
+      <button class="btn ghost" onclick="closeVoiceDiag()">关闭</button>
     </div>
   </div>
 </div>
@@ -1284,6 +1295,7 @@ const SAMPLE_LIST=[
 let WORDS=[], STATS={}, wordsByKey={}, session=null, germanVoice=null;
 let DETAILS={};
 let WRONG_LEVELS={}, LVL_HIST={1:{},2:{},3:{}};
+let AUDIO=null;   // 单文件版内嵌的离线德语发音（{词key: dataURI}）
 let curMode='A', curOrder='seq', curScope='all';
 const APP_VERSION='1.7.0';
 
@@ -1316,6 +1328,7 @@ function loadAll(){
             const r=parseGrammar(emb.grammar);
             if(r.cards.length){ GRAMMAR_CARDS=r.cards; try{ LS.setItem(LS_GRAMMAR_RAW, emb.grammar); }catch(e){} }
           }
+          if(emb.audio) AUDIO=emb.audio;   // 离线发音包（只放内存，不占存储配额）
           try{ LS.setItem('deutsch.vocab.embeddedStamp.v1', emb.stamp); }catch(e){}
         }
       }
@@ -1377,8 +1390,32 @@ function initSpeech(){
     if(!germanVoice) $('voiceNote').textContent='（本地未检测到德语语音，发音将使用在线语音，需联网）';
   },6500);
 }
+// 离线发音包查找：按发音文本 → 词条 key
+function audioFor(t){
+  if(!AUDIO) return null;
+  const n=normGerman(String(t||'').replace(/\s*\+[^\s]*/g,''));
+  if(AUDIO[n]) return AUDIO[n];
+  for(const w of WORDS){
+    const g=normGerman(w.gword||w.word);
+    if(g===n || normGerman(displayOf(w))===n){
+      if(AUDIO[g]) return AUDIO[g];
+    }
+  }
+  return null;
+}
 function speakDe(t){
   if(!t) return;
+  // ① 优先用离线音频包（完全离线、音质稳定）
+  const a=audioFor(t);
+  if(a){
+    try{
+      if('speechSynthesis' in window) speechSynthesis.cancel();
+      const au=new Audio(a);
+      au.play();
+      return;
+    }catch(e){}
+  }
+  // ② 系统语音
   if(germanVoice){
     try{
       speechSynthesis.cancel();
@@ -1388,6 +1425,7 @@ function speakDe(t){
       return;
     }catch(e){}
   }
+  // ③ 在线语音兜底
   speakDeOnline(t);
 }
 function speakDeOnline(t){
@@ -1612,7 +1650,7 @@ function pickOpt(i){
     btns[i].classList.add('bad'); btns[s.correctIdx].classList.add('ok');
     cls='bad'; fb='✗ 选错了。正确答案：<b>'+escHtml(s.opts[s.correctIdx])+'</b><br>德语：<b>'+escHtml(disp)+'</b> <button class="spk" data-speak="'+escAttr(w.gword||disp)+'">🔊</button>'+pluPart;
   }
-  fb+=detHtmlFor(w)+noteHtmlFor(w);
+  fb+=detHtmlFor(w)+noteHtmlFor(w)+wrongBtnHtml(w);
   showFeedback(cls,fb);
   record(i===s.correctIdx, cls, fb);
   showNext();
@@ -1630,7 +1668,7 @@ function judge(ok){
   const s=session; if(s.answered) return;
   s.answered=true;
   const cls=ok?'ok':'bad';
-  let fb=(ok?'✓ 认识 — 记对':'✗ 记错了，继续加油')+detHtmlFor(s.current)+noteHtmlFor(s.current);
+  let fb=(ok?'✓ 认识 — 记对':'✗ 记错了，继续加油')+detHtmlFor(s.current)+noteHtmlFor(s.current)+wrongBtnHtml(s.current);
   showFeedback(cls,fb);
   record(ok, cls, fb);
   showNext();
@@ -1678,7 +1716,7 @@ function submitC(){
     }
     fb=msg+(isSame?'':pluLine);
   }
-  fb+=detHtmlFor(w)+noteHtmlFor(w);
+  fb+=detHtmlFor(w)+noteHtmlFor(w)+wrongBtnHtml(w);
   showFeedback(cls,fb);
   record(g.result!=='wrong', cls, fb);
   showNext();
@@ -2600,6 +2638,65 @@ function renderTimerFloat(){
   $('tfWeek').textContent='本周 '+fmtSec(weekTotalSec());
 }
 
+// —— 手动把词加入错题本（答对时也能用：觉得自己还没掌握就加进去重点复习） ——
+function addToWrongbook(w){
+  if(!w) return false;
+  const k=keyOf(w);
+  const lvl=WRONG_LEVELS[k];
+  if(lvl){ alert('这个词已经在错题本 L'+lvl+' 里了'); return false; }
+  applyLevelResult(WRONG_LEVELS, LVL_HIST, k, false, dayKey(new Date()));
+  saveLevels(); saveHist();
+  renderStrip();
+  alert('已加入错题本 L1 ✓\n之后可以在「错词本 → 练这一层」里重点复习');
+  return true;
+}
+function addCurrentToWrongbook(){
+  const s=session; if(!s || !s.current) return;
+  if(addToWrongbook(s.current)) renderCard();
+}
+function wrongBtnHtml(w){
+  if(!w) return '';
+  const k=keyOf(w);
+  if(WRONG_LEVELS[k]) return '<div class="note-wrap"><span class="mut sm">已在错题本 L'+WRONG_LEVELS[k]+'</span></div>';
+  return '<div class="note-wrap"><button class="btn ghost sm" onclick="addCurrentToWrongbook()">➕ 加入错题本</button></div>';
+}
+
+// —— 语音诊断：查看当前设备可用的语音（手机/电脑系统语音） ——
+function reloadVoices(){
+  try{
+    const vs=speechSynthesis.getVoices();
+    germanVoice=vs.find(function(v){ return /^de([-_]|$)/i.test(v.lang); })||null;
+    if(germanVoice) $('voiceNote').textContent='';
+    else $('voiceNote').textContent='（本地无德语语音，改用在线语音）';
+  }catch(e){}
+  openVoiceDiag();
+}
+function openVoiceDiag(){
+  let html='<div class="mut sm">检测时间：'+new Date().toLocaleString('zh-CN')+' · 环境：'+(location.protocol==='file:'?'本地文件':'网页版')+'</div>';
+  if(!('speechSynthesis' in window)){
+    html+='<div class="feedback bad" style="display:block">此浏览器不支持语音合成（speechSynthesis）</div>';
+  }else{
+    const vs=speechSynthesis.getVoices();
+    html+='<div class="lbl">当前设备可用语音（'+vs.length+' 个）</div>';
+    html+='<div style="max-height:32vh;overflow:auto;font-size:12px;line-height:1.7;border:1px solid var(--line);border-radius:8px;padding:8px;">'+
+      (vs.length ? vs.map(function(v){
+        const flag=/^de/i.test(v.lang)?'🇩🇪 ':(/^en/i.test(v.lang)?'🇬🇧 ':(/^zh/i.test(v.lang)?'🇨🇳 ':'🌐 '));
+        return '<div>'+flag+escHtml(v.name)+' <span class="mut">('+escHtml(v.lang)+')</span></div>';
+      }).join('') : '<div class="mut">（列表为空 —— 点「重新检测」或先点「试听」触发加载）</div>')+'</div>';
+    const de=vs.filter(function(v){ return /^de/i.test(v.lang); });
+    html+='<div class="lbl">离线发音包：'+(AUDIO?('✓ 已内嵌 '+Object.keys(AUDIO).length+' 个单词的德语发音（发音按钮优先用它，完全离线）'):'✗ 未内嵌（发音走系统语音或在线语音）')+'</div>';
+    html+='<div class="lbl">德语语音：'+(germanVoice?('✓ '+escHtml(germanVoice.name)):'✗ 未检测到')+' · 可用德语语音 '+de.length+' 个</div>';
+    html+='<div class="actions">'+
+      '<button class="btn primary" onclick="speakDe(\'der Tisch\')">🔊 试听本地语音</button>'+
+      '<button class="btn ghost" onclick="speakDeOnline(\'Guten Tag\')">🌐 试听在线语音</button>'+
+      '<button class="btn ghost" onclick="reloadVoices()">重新检测</button>'+
+      '</div>';
+    html+='<div class="mut sm">本地语音由手机/电脑系统提供（iPhone 自带德语；安卓多为 Google 语音服务里的德语）。本地没有时会自动改用在线语音（需联网）。</div>';
+  }
+  $('voiceDiagBody').innerHTML=html;
+  $('voiceDiagModal').classList.remove('hidden');
+}
+function closeVoiceDiag(){ $('voiceDiagModal').classList.add('hidden'); }
 // ---------- 词表体检 ----------
 function openAudit(){
   const rows=WORDS.map(function(w,i){
@@ -2674,6 +2771,7 @@ function loadSample(){
 
 // ---------- 键盘 ----------
 document.addEventListener('keydown',function(e){
+  if(!$('voiceDiagModal').classList.contains('hidden')){ if(e.key==='Escape') closeVoiceDiag(); return; }
   if(!$('auditModal').classList.contains('hidden')){ if(e.key==='Escape') closeAudit(); return; }
   if(!$('taskModal').classList.contains('hidden')){ if(e.key==='Escape') closeTaskMgr(); return; }
   if(!$('celebrateModal').classList.contains('hidden')){ if(e.key==='Escape') closeCelebrate(); return; }
@@ -2745,6 +2843,7 @@ function init(){
   $('btnPick').addEventListener('click',openPick);
   $('btnDet').addEventListener('click',openDet);
   $('btnWrongBook').addEventListener('click',openWrongBook);
+  $('btnVoice').addEventListener('click',openVoiceDiag);
   $('btnAudit').addEventListener('click',openAudit);
   $('btnReset').addEventListener('click',resetProgress);
   $('btnCopyAudit').addEventListener('click',copyAudit);
