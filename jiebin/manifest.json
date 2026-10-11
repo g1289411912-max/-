@@ -1,0 +1,15 @@
+{
+  "name": "德语介宾助手",
+  "short_name": "德语介宾",
+  "description": "德语动词介词搭配 4 选 1 练习，含解析、三层错题本、笔记、选词练习",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f9",
+  "theme_color": "#1d4ed8",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
