@@ -1,0 +1,15 @@
+{
+  "name": "德语过去助手",
+  "short_name": "德语过去",
+  "description": "给出动词原型，自己写过去式与过去分词；含解析、三层错题本、笔记、选词练习",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef4f3",
+  "theme_color": "#0f766e",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
