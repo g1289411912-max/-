@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="36" fill="#b45309"/>
+  <rect x="26" y="26" width="140" height="20" rx="5" fill="#000000"/>
+  <rect x="26" y="52" width="140" height="20" rx="5" fill="#dd0000"/>
+  <rect x="26" y="78" width="140" height="20" rx="5" fill="#ffce00"/>
+  <text x="96" y="152" font-size="60" font-family="Microsoft YaHei, PingFang SC, Segoe UI, sans-serif"
+        font-weight="bold" fill="#ffffff" text-anchor="middle">语法</text>
+</svg>

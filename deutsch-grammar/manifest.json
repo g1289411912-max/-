@@ -1,0 +1,15 @@
+{
+  "name": "德语语法积累助手",
+  "short_name": "语法积累",
+  "description": "只给弱提示，自己回想，点开解析对答案，掌握 / 没掌握两键自测；没掌握自动进三层错题本",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf6ef",
+  "theme_color": "#b45309",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
