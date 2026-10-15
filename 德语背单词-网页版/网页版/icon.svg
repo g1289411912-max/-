@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="36" fill="#2563eb"/>
+  <rect x="30" y="44" width="132" height="22" rx="6" fill="#000"/>
+  <rect x="30" y="74" width="132" height="22" rx="6" fill="#dd0000"/>
+  <rect x="30" y="104" width="132" height="22" rx="6" fill="#ffce00"/>
+  <text x="96" y="170" font-size="46" font-family="Segoe UI, sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">DE</text>
+</svg>
