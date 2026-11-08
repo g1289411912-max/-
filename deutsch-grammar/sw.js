@@ -1,7 +1,7 @@
 // 德语语法积累助手 · Service Worker
 // 作用：① 手机上可以「添加到主屏」当 App 用 ② 断网也能打开、断网也能练
 // 策略：index.html / data.js = 网络优先（保证拿到你刚上传的新版），失败时回退缓存；其余资源缓存优先。
-const CACHE = 'deutsch-grammar-v1';
+const CACHE = 'deutsch-grammar-v2';
 // 注意：data.js 一定要缓存，否则断网时首屏语法库会空
 const CORE = ['./', './index.html', './data.js', './manifest.json', './icon.svg'];
 

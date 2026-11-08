@@ -53,6 +53,15 @@ h1{font-size:22px;margin:0}
 .hintbox .hl{font-size:12px;color:#92400e;font-weight:600;margin-bottom:6px;letter-spacing:.4px}
 .hintbox .ht{font-size:16px;line-height:1.75;color:#422006}
 .hintbox .hb{font-size:12px;color:#a16207;margin-top:8px}
+/* 中文翻译靶 */
+.tgtbox{background:#f0f7ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;margin:12px 0 4px}
+.tgtbox .tl{font-size:12px;color:#1d4ed8;font-weight:600;margin-bottom:8px;letter-spacing:.4px}
+.tgtbox ol.tgt{list-style:none;margin:0;padding:0}
+.tgtbox ol.tgt li{display:flex;gap:9px;align-items:flex-start;padding:5px 0;border-top:1px dashed #dbeafe;font-size:15.5px;line-height:1.8;color:#1e293b}
+.tgtbox ol.tgt li:first-child{border-top:none}
+.tgtbox .tnum{flex:none;width:20px;height:20px;border-radius:50%;background:#1d4ed8;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-top:5px}
+.tgtbox .ttx{flex:1;min-width:0;word-break:break-word}
+.tgtbox .ttx code{background:#dbeafe;color:#1e3a8a}
 .gapnote{text-align:center;color:var(--mut);font-size:13px;margin:14px 0 2px}
 .askbox{text-align:center;margin:22px 0 6px;font-size:15px;font-weight:600;color:var(--pri2)}
 .trigger{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
@@ -186,6 +195,7 @@ body{touch-action:manipulation}
       </div>
       <div class="rel" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">
         <label class="sm mut"><input type="checkbox" id="ckOnlyDet" checked> 只看有正文详解的条目</label>
+        <label class="sm mut"><input type="checkbox" id="ckOnlyTgt"> 只看有中文翻译靶的</label>
         <label class="sm mut"><input type="checkbox" id="ckNoRepeat"> 同一大类尽量不连续</label>
       </div>
       <div class="actions">
@@ -210,6 +220,7 @@ body{touch-action:manipulation}
       <p class="mut sm" style="margin:0 0 8px">点「没掌握」进 L1；L1 点「掌握了」=毕业，再点「没掌握」→ L2；L2 同理 → L3；L3 再错就留在 L3。每层都能单独开练。</p>
       <div id="wrongList"></div>
       <div class="actions">
+        <button class="btn ghost" id="btnPruneWrong">清理不在库里的条目</button>
         <button class="btn ghost" id="btnClearWrong">清空错题本</button>
         <button class="btn ghost" id="btnCloseWrong">关闭</button>
       </div>
@@ -229,7 +240,7 @@ body{touch-action:manipulation}
       <div id="pcPrompt"></div>
       <div id="pcAnswer"></div>
       <div id="pcFeedback"></div>
-      <div class="khint">空格 / 回车 = 看解析（再看一次就收起）· <b>1</b> 掌握了 · <b>2</b> 没掌握 · <b>←</b> 上一条<br>先自己想一遍，再点开解析对答案，然后老实点「掌握了 / 没掌握」</div>
+      <div class="khint">空格 / 回车 = 看解析（再看一次就收起）· <b>1</b> 掌握了 · <b>2</b> 没掌握 · <b>←</b> 上一条<br>题面只有弱提示 + 中文翻译靶：先把靶句在心里译成德语，再点开解析对答案</div>
     </div>
   </section>
 
@@ -242,15 +253,17 @@ body{touch-action:manipulation}
 <div id="impModal" class="modal hidden">
   <div class="modal-box">
     <h3>导入提示（.md）</h3>
-    <p class="mut sm">吃你「零碎语法提示.md」的格式，一级一二级都行：<br>
-      <code>**1. 标题**：`wo bitte geht's zur Party?` —— 问路到派对</code><br>
-      <code>**弱提示**：口语问路、去派对、到某处怎么走。</code><br>
+    <p class="mut sm">吃你「新.md」/「零碎语法提示（新）.md」的格式：<br>
+      <code>**1. 标题**：问路：去派对怎么走？</code><br>
+      <code>**弱提示**：口语问路；去派对/火车站；注意 `zu` 和阴性名词的缩合。</code><br>
       <code>**子分支**：3 条</code><br>
-      也认 <code>**1. 标题：谁……**</code> 这种把标题写在冒号后面的写法。编号只用来跟解析对齐，不必连续。</p>
+      <code>**中文翻译靶**：</code> 下面接 <code>1. …</code> <code>2. …</code> 中文句子（会显示在题面上）<br>
+      也认 <code>**1. 标题：谁……**</code> 这种把标题写在冒号后面的写法；编号可带小写后缀（<code>93a / 93b</code>），
+      会当成两条、都去挂合集第 93 节（同编号只有第一条能拿到正文）。编号只用来跟合集对齐，不必连续。</p>
     <input type="file" id="impFile" accept=".md,.markdown,.txt" multiple>
     <p class="mut sm" id="impFileName"></p>
     <p class="mut sm">可一次多选几个文件，自动合并。</p>
-    <textarea id="impText" rows="10" placeholder="或把「零碎语法提示.md」的内容粘贴到这里…"></textarea>
+    <textarea id="impText" rows="10" placeholder="或把「新.md」的内容粘贴到这里…"></textarea>
     <div class="actions">
       <button class="btn primary" id="btnDoImport">导入</button>
       <button class="btn ghost" id="btnSample">恢复内置提示</button>
@@ -380,11 +393,18 @@ const dec = function(k){ return decodeURIComponent(k); };
 function inlineMd(s){
   let t = escHtml(s);
   t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // 笔记里偶尔会有落单的 **（如「核**心」这种笔误）。落单时丢掉最后一个，
+  // 免得后面整段都被当成粗体、屏幕上还露出星号。
+  const dbl = (t.match(/\*\*/g) || []).length;
+  if (dbl % 2 === 1){
+    const i = t.lastIndexOf('**');
+    t = t.slice(0, i) + t.slice(i + 2);
+  }
   t = t.replace(/\*\*\*([^*]+)\*\*\*/g, '<b><i>$1</i></b>');
   t = t.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   t = t.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<i>$2</i>');
   t = t.replace(/__([^_]+)__/g, '<b>$1</b>');
-  t = t.replace(/_([^_\n]+)_/g, '<i>$1</i>');
+  t = t.replace(/(^|[^_\w])_([^_\n]+)_/g, '$1<i>$2</i>');
   t = t.replace(/~~([^~]+)~~/g, '<del>$1</del>');
   t = t.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
   t = t.replace(/\s{2,}$/, ' ');
@@ -545,7 +565,7 @@ function lsGet(k, def){ try{ const v = localStorage.getItem(k); return v == null
 function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const BUILT = (window.GRAMMAR_DATA && window.GRAMMAR_DATA.items) ? window.GRAMMAR_DATA.items : [];
 
 let ITEMS = [];                 // 当前练习条目
@@ -564,55 +584,67 @@ let auditWarn = (window.GRAMMAR_DATA && window.GRAMMAR_DATA.warnings) || [];
 const GROUP_NAME = { all:'全部', pos:'介词 / 格', verb:'动词搭配', phrase:'句型 / 短语', word:'词汇辨析', other:'其他' };
 
 /* ---------------- 条目构造（把提示和合集按编号拼起来） ---------------- */
+const HINT_TITLE = /^\*\*\s*(\d+)([a-z]?)\s*[.、]\s*(.*?)\s*\*\*\s*(?:[:：]\s*(.*))?$/;
+const HINT_WEAK = /^\*\*\s*弱提示\s*\*\*\s*[:：]\s*(.*)$/;
+const HINT_BRANCH = /^\*\*\s*子分支\s*\*\*\s*[:：]\s*(\d+)/;
+const HINT_TARGET = /^\*\*\s*中文翻译靶\s*\*\*\s*[:：]?\s*(.*)$/;
+const TARGET_LINE = /^\d+\s*[.、)]\s*(.+)$/;
+
 function splitHints(text){
-  const out = [], seen = {};
+  const lines = String(text || '').replace(/\u00a0/g,' ').split('\n');
+  const out = [];
   let cur = null;
-  String(text || '').replace(/\u00a0/g,' ').split('\n').forEach(function(raw){
-    const t = raw.trim();
-    if (!t) return;
-    let m = /^\*\*\s*(\d+)\s*[.、]\s*(.*?)\s*\*\*\s*(?:[:：]\s*(.*))?$/.exec(t);
+  let i = 0;
+  while (i < lines.length){
+    const t = lines[i].trim();
+    if (!t){ i++; continue; }
+    let m = HINT_TITLE.exec(t);
     if (m){
-      const bold = m[2].trim(), after = (m[3] || '').trim();
+      const bold = m[3].trim(), after = (m[4] || '').trim();
       let title, label;
       const ci = bold.search(/[:：]/);
-      if (ci === 2){                    // **1. 标题：说明**
-        title = bold.slice(3).trim();
-        label = after;
-      } else if (ci === 0){             // **1. ：说明**（少见，当无标题）
-        title = after;
-        label = '';
-      } else if (ci > 0){               // 别的冒号位置也按「冒号前是标题」处理
+      if (bold === '标题'){                 // **1. 标题**：说明
+        title = after; label = '';
+      } else if (/^标题\s*[:：]/.test(bold)){  // **1. 标题：说明**
+        title = bold.replace(/^标题\s*[:：]\s*/, '').trim(); label = after;
+      } else if (ci > 0){                   // 别的冒号位置：冒号前当标题
         title = bold.slice(0, ci).trim();
         label = after || bold.slice(ci + 1).trim();
-      } else if (bold === '标题'){       // **1. 标题**：说明
-        title = after;
-        label = '';
       } else {
         title = bold; label = after;
       }
       if (title === '标题') title = '';
       if (label === '标题') label = '';
-      const no = parseInt(m[1], 10);
-      const key = no + '|' + (title || label).slice(0, 8);
-      if (seen[key]){           // 同编号重复出现（多文件合并）→ 并进上一条
-        cur = seen[key];
-        return;
-      }
-      cur = { no: no, title: title, label: label, hint: '', branch: 0 };
-      seen[key] = cur;
+      cur = { no: m[1] + m[2], noint: parseInt(m[1], 10), suffix: m[2],
+              title: title, label: label, hint: '', branch: 0, targets: [] };
       out.push(cur);
-      return;
+      i++; continue;
     }
-    if (!cur) return;
-    m = /^\*\*\s*弱提示\s*\*\*\s*[:：]\s*(.*)$/.exec(t);
-    if (m){ cur.hint = m[1].trim(); return; }
-    m = /^\*\*\s*子分支\s*\*\*\s*[:：]\s*(\d+)/.exec(t);
-    if (m){ cur.branch = parseInt(m[1], 10); }
-  });
+    if (!cur){ i++; continue; }
+    m = HINT_WEAK.exec(t);
+    if (m){ cur.hint = m[1].trim(); i++; continue; }
+    m = HINT_BRANCH.exec(t);
+    if (m){ cur.branch = parseInt(m[1], 10); i++; continue; }
+    if (HINT_TARGET.test(t)){
+      // 中文翻译靶：下面一直到「---」或下一条标题，都是编号句
+      i++;
+      while (i < lines.length){
+        const tt = lines[i].trim();
+        if (!tt){ i++; continue; }
+        if (tt === '---' || HINT_TITLE.test(tt)) break;
+        const mm = TARGET_LINE.exec(tt);
+        if (mm) cur.targets.push(mm[1].trim());
+        i++;
+      }
+      continue;
+    }
+    i++;
+  }
   return out;
 }
 
-const CN_DIGIT = {'零':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+const CN_DIGIT = {'零':0,'〇':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+const CN_CHARS = '零〇一二三四五六七八九十百';
 function cn2num(s){
   s = String(s || '').trim();
   if (!s) return null;
@@ -631,22 +663,26 @@ function mkSection(no, title, body){
   return { no: no, title: ts.title, sub: ts.sub, body: String(body || '') };
 }
 /* 把合集切成小节（和 tools/gen-data.py 的 parse_coll 保持一致）：
-   · 中文数字标题「一、二、…」一定是小节
-   · 阿拉伯数字标题「1. 2. 3.」只有当它正好是「上一个中文小节编号 + 1」时才算小节，
-     其余都算段内小标题，留在正文里。
-     例：一、二、后面跟的 1. 2. 4. 是子标题（4 ≠ 3）；六十一、后面的 1.…7. 也是子标题。
+   · 「一、二、…、一百六十九、」这种中文数字标题一定是小节（也认「零」：一百零一）
+   · 「1. 2. 3.」这种阿拉伯数字标题默认是段内小标题，留在正文里；
+     只有整份文件里一个中文数字标题都没有时，才把「上一个编号 +1」的阿拉伯数字标题当小节
    · 标题同一行后面还有文字时算这一节的正文（**八、 „Uni“（大学）**——仅作…） */
 function splitColl(text, hintNos){
   const lines = String(text || '').replace(/\u00a0/g,' ').replace(/\r/g,'').split('\n');
   const secs = [];
   let cur = null, top = null;
   const led = '(?:\\s*(?:#{1,6}\\s*)?(?:\\*\\*|__)?\\s*)';
-  const cnRe = new RegExp('^' + led + '([一二三四五六七八九十百]+)\\s*[、.．]\\s*(.+?)\\s*$');
+  const cnRe = new RegExp('^' + led + '([' + CN_CHARS + ']+)\\s*[、.．]\\s*(.+?)\\s*$');
   const numRe = new RegExp('^' + led + '(\\d+)\\s*[、.．]\\s*(.+?)\\s*$');
+  const cnGuard = new RegExp('[' + CN_CHARS + ']');
+  const hasCn = lines.some(function(ln){
+    const m = cnRe.exec(ln);
+    return m && cnGuard.test(m[1]) && cn2num(m[1]);
+  });
   lines.forEach(function(ln, idx){
     let hit = null, tail = '';
     let m = cnRe.exec(ln);
-    if (m && /[一二三四五六七八九十百]/.test(m[1])){
+    if (m && cnGuard.test(m[1])){
       const n = cn2num(m[1]);
       if (n){
         top = n;
@@ -655,14 +691,16 @@ function splitColl(text, hintNos){
         tail = parts.slice(1).join(' ').replace(/\*+/g,'').replace(/^[—–-]+\s*/, '').trim();
       }
     }
-    if (!hit){
+    if (!hit && !hasCn){
       m = numRe.exec(ln);
       if (m){
         const n = parseInt(m[1], 10);
-        if (top !== null && n === top + 1){
+        // 整份文件没有中文数字标题时才走这条路：第一条数字标题起小节，之后「上一个 +1」接着切
+        if (top === null || n === top + 1){
           const parts = m[2].split(/\*\*|__/);
           hit = [n, parts[0].replace(/\*+/g,'').trim()];
           tail = parts.slice(1).join(' ').replace(/\*+/g,'').replace(/^[—–-]+\s*/, '').trim();
+          top = n;
         }
       }
     }
@@ -687,26 +725,30 @@ function titleSplit(title){
 }
 function buildItems(hintText, collText){
   const hints = hintText ? splitHints(hintText) : [];
-  const secs = splitColl(collText, hints.map(function(h){ return h.no; }));
+  const secs = splitColl(collText, hints.map(function(h){ return h.noint; }));
   const byNo = {};
   secs.forEach(function(s){ (byNo[s.no] = byNo[s.no] || []).push(s); });
   const used = {}, items = [];
   hints.forEach(function(h){
-    const grp = byNo[h.no] || [];
-    used[h.no] = 1;
+    // 同一个合集小节只给第一条用（93a / 93b 这种同编号的，后面的不挂正文，免得挂错段）
+    const first = !used[h.noint];
+    const grp = first ? (byNo[h.noint] || []) : [];
+    used[h.noint] = 1;
     const sections = grp.map(function(s){ const ts = titleSplit(s.title); return { no: s.no, title: ts.title, sub: ts.sub, body: s.body }; });
-    const first = sections[0] || { title: h.title, sub: '', body: '' };
+    const head = sections[0] || { title: h.title, sub: '', body: '' };
     items.push({
-      key: 'g' + h.no, no: h.no, title: h.title || first.title, sub: h.label || first.sub,
-      hint: h.hint, branch: h.branch, group: 'other', src: 'hint', sections: sections
+      key: 'g' + h.no, no: h.noint, noRaw: h.no,
+      title: h.title || head.title, sub: h.label || head.sub,
+      hint: h.hint, branch: h.branch, targets: h.targets || [],
+      group: 'other', src: 'hint', sections: sections
     });
   });
   secs.forEach(function(s){
     if (used[s.no]) return;
     const ts = titleSplit(s.title);
     items.push({
-      key: 'c' + s.no, no: s.no, title: ts.title, sub: ts.sub,
-      hint: '', branch: 0, group: 'other', src: 'coll',
+      key: 'c' + s.no, no: s.no, noRaw: String(s.no), title: ts.title, sub: ts.sub,
+      hint: '', branch: 0, targets: [], group: 'other', src: 'coll',
       sections: [{ no: s.no, title: ts.title, sub: ts.sub, body: s.body }]
     });
   });
@@ -714,13 +756,14 @@ function buildItems(hintText, collText){
     if (a.no !== b.no) return a.no - b.no;
     return (a.src === 'hint' ? 0 : 1) - (b.src === 'hint' ? 0 : 1);
   });
-  // 去重：标题完全一样时保留正文更全的那条
+  // 去重：标题完全一样时保留正文更全的那条（有靶的优先）
   const out = [], byTitle = {};
   items.forEach(function(it){
     const t = norm(it.title);
     if (t && byTitle[t]){
       const prev = byTitle[t];
-      if (bodyLen(it) > bodyLen(prev)){ out[out.indexOf(prev)] = it; byTitle[t] = it; }
+      const win = bodyLen(it) > bodyLen(prev) || ((it.targets || []).length > (prev.targets || []).length);
+      if (win){ out[out.indexOf(prev)] = it; byTitle[t] = it; }
       return;
     }
     if (t) byTitle[t] = it;
@@ -730,6 +773,7 @@ function buildItems(hintText, collText){
     it.idx = i + 1;
     it.noText = '第 ' + (i + 1) + ' 条';
     it.subs = it.sections.reduce(function(n, s){ return n + (s.body.match(/^\s*(?:\*\*)?\s*\d+\s*[.、]\s*\S/gm) || []).length; }, 0);
+    it.targets = it.targets || [];
     it.group = classify(it);
     it.lens = bodyLen(it);
   });
@@ -756,18 +800,21 @@ function classify(it){
 function itemHasBody(it){
   return it.sections.some(function(s){ return norm(s.body).length > 0; });
 }
+function itemHasTargets(it){ return (it.targets || []).length > 0; }
 function itemSearch(it){
-  return norm([it.title, it.sub, it.hint, it.sections.map(function(s){ return s.title + ' ' + s.sub + ' ' + s.body; }).join(' ')].join(' '));
+  return norm([it.title, it.sub, it.hint, (it.targets || []).join(' '),
+               it.sections.map(function(s){ return s.title + ' ' + s.sub + ' ' + s.body; }).join(' ')].join(' '));
 }
-function scopeItems(scope, group, onlyDet){
+function scopeItems(scope, group, onlyDet, onlyTgt){
   let list = ITEMS.slice();
   if (group && group !== 'all') list = list.filter(function(it){ return it.group === group; });
   if (onlyDet) list = list.filter(itemHasBody);
+  if (onlyTgt) list = list.filter(itemHasTargets);
   if (scope === 'wrong') list = list.filter(function(it){ return LEVELS[it.key]; });
   return list;
 }
 function buildQueue(){
-  let list = scopeItems(curScope, curGroup, $('ckOnlyDet').checked);
+  let list = scopeItems(curScope, curGroup, $('ckOnlyDet').checked, $('ckOnlyTgt') && $('ckOnlyTgt').checked);
   if (curScope === 'n'){
     const n = Math.max(1, parseInt($('inN').value, 10) || 20);
     list = shuffle(list).slice(0, n);
@@ -842,21 +889,34 @@ function record(key, ok){
 }
 
 /* ---------------- 卡片 ---------------- */
+function targetBox(it){
+  const t = it.targets || [];
+  if (!t.length) return '';
+  const items = t.map(function(x, i){
+    return '<li><span class="tnum">' + (i + 1) + '</span><span class="ttx">' + inlineMd(x) + '</span></li>';
+  }).join('');
+  return '<div class="tgtbox"><div class="tl">🎯 中文翻译靶 · 先在心里把它们译成德语</div>' +
+    '<ol class="tgt">' + items + '</ol></div>';
+}
 function promptHtml(it){
   const h = [];
-  h.push('<div class="qno">' + escHtml(it.noText) + (it.branch ? ' · 提示里说有 ' + it.branch + ' 条子分支' : '') + '</div>');
+  h.push('<div class="qno">' + escHtml(it.noText) + (it.branch ? ' · 提示里说有 ' + it.branch + ' 条子分支' : '') +
+    (itemHasTargets(it) ? ' · 🎯' + it.targets.length + ' 个翻译靶' : '') + '</div>');
   h.push('<div class="ptitle">' + escHtml(it.title || '（无标题）') + '</div>');
   if (it.sub && norm(it.sub) !== norm(it.title)) h.push('<div class="psub">' + escHtml(it.sub) + '</div>');
   if (it.hint) h.push('<div class="hintbox"><div class="hl">弱提示 · 只看这个自己想</div><div class="ht">' + inlineMd(it.hint) + '</div></div>');
   else h.push('<div class="hintbox" style="background:#f8fafc;border-color:var(--line)"><div class="hl" style="color:var(--mut)">这条没有弱提示</div><div class="ht" style="color:#57534e">上面就是全部题目——把这一条讲的东西在心里过一遍，再看解析。</div></div>');
-  if (it.subs) h.push('<div class="gapnote">正文里有 ' + it.subs + ' 个小标题，依次想一想它们分别讲什么</div>');
+  h.push(targetBox(it));
+  if (it.subs) h.push('<div class="gapnote">解析里有 ' + it.subs + ' 个小标题，依次想一想它们分别讲什么</div>');
   return h.join('');
 }
 function answerHtml(it){
   if (!itemHasBody(it)){
     return '<div class="answerwrap"><div class="anbox" style="margin-top:16px"><div class="anhead"><span>📖 解析</span><span>这条没有正文</span></div>' +
-      '<div class="anbody"><div class="gapc">笔记里这一条只有一句话，没有正文详解（原话：' + escHtml(it.title) + '）。<br>' +
-      '要点：' + escHtml(it.sub || it.hint || '见标题本身') + '<br>可以选择「掌握了」直接过，或点「没掌握」把它留在错题本里，等你补完笔记重新导入。</div></div></div></div>';
+      '<div class="anbody"><div class="gapc">笔记里这一条只有提示和「中文翻译靶」，合集里还没有对应的正文。' +
+      '（原话：' + escHtml(it.title) + '）<br>' +
+      '可以先按中文翻译靶自己译一遍，再对照「弱提示」里的要点自查；' +
+      '等你把这一段补进合集后，重新导入即可看到解析。</div></div></div></div>';
   }
   const secs = it.sections.map(function(s, i){
     const head = (it.sections.length > 1 || s.title)
@@ -872,7 +932,9 @@ function answerHtml(it){
 function renderStrip(){
   const s = session;
   const st = s ? (s.correct + s.wrong) : 0;
-  $('ssCount').innerHTML = '语法点 <b>' + ITEMS.length + '</b> 条';
+  const tgtCount = ITEMS.reduce(function(a, it){ return a + (it.targets || []).length; }, 0);
+  $('ssCount').innerHTML = '语法点 <b>' + ITEMS.length + '</b> 条' +
+    (tgtCount ? ' · 中文翻译靶 <b>' + tgtCount + '</b> 句' : '');
   $('ssSess').innerHTML = s ? ('本轮 <b>' + (s.i + (s.done[s.i] ? 1 : 0)) + '/' + s.queue.length + '</b> · 掌握 <b class="okc">' + s.correct + '</b> · 没掌握 <b style="color:var(--bad)">' + s.wrong + '</b>')
                             : '本轮 <b>未开始</b>';
   const w = Object.keys(LEVELS).length;
@@ -1066,6 +1128,21 @@ function clearWrong(){
   renderWrongBook();
   renderStrip();
 }
+/* 语法库换了一批（编号变了）之后，老记录会变成「不在当前语法库」，这里一键清掉这些孤儿 */
+function pruneWrong(){
+  const orphans = Object.keys(LEVELS).filter(function(k){ return !byKey[k]; });
+  if (!orphans.length){ alert('没有不在库里的条目，不用清理 🎉'); return; }
+  if (!confirm('这会移出 ' + orphans.length + ' 条「不在当前语法库」的旧记录（多半是换笔记/换编号后留下的）。\n笔记会保留。继续？')) return;
+  orphans.forEach(function(k){
+    delete LEVELS[k];
+    Object.keys(HIST).forEach(function(lv){ delete HIST[lv][k]; });
+  });
+  lsSet(LS.levels, LEVELS);
+  lsSet(LS.hist, HIST);
+  renderWrongBook();
+  renderStrip();
+  alert('已移出 ' + orphans.length + ' 条旧记录。');
+}
 function openDetail(k){
   const key = dec(k);
   const it = byKey[key] || ITEMS.filter(function(x){ return x.key === key; })[0];
@@ -1138,6 +1215,7 @@ function renderStartAt(f){
     html += '<div class="pk-row" onclick="startAt(\'' + escAttr(enc(it.key)) + '\')">' +
       '<span class="mut" style="flex:none;width:64px">' + escHtml(it.noText) + '</span>' +
       '<span class="nm" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(it.title) + '</span>' +
+      (itemHasTargets(it) ? '<span class="chip" style="background:#dbeafe;color:#1e3a8a">🎯' + it.targets.length + '</span>' : '') +
       (LEVELS[it.key] ? '<span class="chip badc">' + levelName(LEVELS[it.key]) + '</span>' : '') +
       (itemHasBody(it) ? '' : '<span class="chip warnc">无正文</span>') +
       '</div>';
@@ -1151,6 +1229,7 @@ function startAt(k){
   if (from < 0) return;
   let list = ITEMS.slice(from);
   if ($('ckOnlyDet').checked) list = list.filter(itemHasBody);
+  if ($('ckOnlyTgt') && $('ckOnlyTgt').checked) list = list.filter(itemHasTargets);
   startSession(list, '从「' + ITEMS[from].title + '」开始');
 }
 function renderPick(f){
@@ -1160,6 +1239,7 @@ function renderPick(f){
     html += '<label class="pk-row"><input type="checkbox" ' + (PICK_SEL[it.key] ? 'checked' : '') +
       ' onchange="pkToggle(\'' + escAttr(enc(it.key)) + '\',this.checked)">' +
       '<span class="nm">' + escHtml(it.title) + '</span>' +
+      (itemHasTargets(it) ? '<span class="chip" style="background:#dbeafe;color:#1e3a8a">🎯' + it.targets.length + '</span>' : '') +
       (LEVELS[it.key] ? '<span class="chip badc">' + levelName(LEVELS[it.key]) + '</span>' : '') +
       '<span class="mut">' + escHtml(it.hint || it.sub || '') + '</span></label>';
   });
@@ -1185,29 +1265,38 @@ function pickStart(){
 function renderAudit(){
   const noBody = ITEMS.filter(function(it){ return !itemHasBody(it); });
   const noHint = ITEMS.filter(function(it){ return !norm(it.hint); });
+  const noTgt = ITEMS.filter(function(it){ return !itemHasTargets(it); });
+  const tgtCount = ITEMS.reduce(function(a, it){ return a + (it.targets || []).length; }, 0);
   const dist = {};
   ITEMS.forEach(function(it){ dist[it.group] = (dist[it.group] || 0) + 1; });
   $('auditMeta').innerHTML = '来源：' + escHtml((window.GRAMMAR_DATA && window.GRAMMAR_DATA.meta ? window.GRAMMAR_DATA.meta.hintFile + ' + ' + window.GRAMMAR_DATA.meta.collFile : '内置 data.js')) +
-    ' · 条目 <b>' + ITEMS.length + '</b> · 正文合计 ' + ITEMS.reduce(function(a, it){ return a + it.lens; }, 0) + ' 字';
+    ' · 条目 <b>' + ITEMS.length + '</b> · 正文合计 ' + ITEMS.reduce(function(a, it){ return a + it.lens; }, 0) + ' 字' +
+    ' · 中文翻译靶 <b>' + tgtCount + '</b> 句';
   $('auditStat').innerHTML = '分类：' + Object.keys(dist).sort().map(function(g){ return GROUP_NAME[g] + ' ' + dist[g]; }).join(' · ') +
-    ' ｜ 没有弱提示的 <b>' + noHint.length + '</b> 条 · 没有正文的 <b>' + noBody.length + '</b> 条';
-  let html = '<div class="tlbl">全部条目（点标题看解析）</div><table class="wb"><thead><tr><th>#</th><th>标题</th><th>字数</th><th>状态</th></tr></thead><tbody>';
+    ' ｜ 没有弱提示的 <b>' + noHint.length + '</b> 条 · 没有中文翻译靶的 <b>' + noTgt.length + '</b> 条 · 没有正文的 <b>' + noBody.length + '</b> 条';
+  let html = '<div class="tlbl">全部条目（点标题看解析）</div><table class="wb"><thead><tr><th>#</th><th>标题</th><th>靶</th><th>字数</th><th>状态</th></tr></thead><tbody>';
   ITEMS.forEach(function(it){
     html += '<tr><td class="mut">' + it.idx + '</td>' +
       '<td><a href="javascript:void(0)" onclick="openDetail(\'' + escAttr(enc(it.key)) + '\')" style="color:var(--pri)">' + escHtml(it.title) + '</a>' +
-      '<div class="mut sm">' + escHtml(norm(it.hint).slice(0, 70)) + '</div></td>' +
+      '<div class="mut sm">' + escHtml(norm(it.hint).slice(0, 70)) + '</div>' +
+      (itemHasTargets(it) ? '<div class="mut sm" style="color:#1d4ed8">🎯 ' + escHtml((it.targets[0] || '').slice(0, 46)) + (it.targets.length > 1 ? ' …（共 ' + it.targets.length + ' 句）' : '') + '</div>' : '') + '</td>' +
+      '<td class="mut">' + (it.targets || []).length + '</td>' +
       '<td class="mut">' + it.lens + '</td>' +
       '<td>' + (LEVELS[it.key] ? '<span class="chip badc">' + levelName(LEVELS[it.key]) + '</span>' : '') +
       (itemHasBody(it) ? '' : '<span class="chip warnc">无正文</span>') +
-      (norm(it.hint) ? '' : '<span class="chip">无提示</span>') + '</td></tr>';
+      (norm(it.hint) ? '' : '<span class="chip">无提示</span>') +
+      (itemHasTargets(it) ? '' : '<span class="chip">无靶</span>') + '</td></tr>';
   });
   html += '</tbody></table>';
   if (auditWarn.length) html += '<div class="tlbl">导入提醒</div><p class="mut sm">' + auditWarn.map(escHtml).join('<br>') + '</p>';
   $('auditBody').innerHTML = html;
 }
 function copyAudit(){
-  const txt = '语法积累助手 v' + APP_VERSION + '\n条目 ' + ITEMS.length + ' 条\n' +
-    ITEMS.map(function(it){ return it.idx + '. ' + it.title + ' | ' + (norm(it.hint).slice(0, 50)) + ' | ' + it.lens + '字 | ' + GROUP_NAME[it.group]; }).join('\n');
+  const txt = '语法积累助手 v' + APP_VERSION + '\n条目 ' + ITEMS.length + ' 条 · 中文翻译靶 ' +
+    ITEMS.reduce(function(a, it){ return a + (it.targets || []).length; }, 0) + ' 句\n' +
+    ITEMS.map(function(it){
+      return it.idx + '. ' + it.title + ' | ' + (norm(it.hint).slice(0, 40)) + ' | 靶' + (it.targets || []).length + ' | ' + it.lens + '字';
+    }).join('\n');
   const ta = document.createElement('textarea');
   ta.value = txt;
   document.body.appendChild(ta);
@@ -1350,6 +1439,7 @@ function rebuild(msg){
       it2.key = it2.id || ('b' + (i + 1));
       it2.lens = bodyLen(it2);
       it2.subs = it2.subs || 0;
+      it2.targets = it2.targets || [];
       it2.group = classify(it2);
       return it2;
     });
@@ -1448,6 +1538,7 @@ function boot(){
       c.key = c.id || ('b' + (i + 1));
       c.lens = bodyLen(c);
       c.subs = c.subs || 0;
+      c.targets = c.targets || [];
       c.group = classify(c);
       return c;
     });
@@ -1536,6 +1627,7 @@ function bindUi(){
   };
   $('btnCloseWrong').onclick = function(){ $('wrongBookCard').classList.add('hidden'); };
   $('btnClearWrong').onclick = clearWrong;
+  $('btnPruneWrong').onclick = pruneWrong;
 
   $('btnNoteList').onclick = function(){ renderNoteList(''); $('nlFilter').value = ''; openModal('noteListModal'); };
   $('nlFilter').oninput = function(){ renderNoteList(this.value); };
