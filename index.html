@@ -611,6 +611,7 @@ html.ts-4{--base-fs:25px;}
     <div class="actions">
       <button class="btn primary" id="btnDoImport">导入</button>
       <button class="btn ghost" id="btnSample">载入示例词表（替换当前）</button>
+      <button class="btn ghost" id="btnClearLocal">清除本机词表</button>
       <button class="btn ghost" id="btnCancelImport">取消</button>
     </div>
   </div>
@@ -1527,7 +1528,7 @@ let DETAILS={};
 let WRONG_LEVELS={}, LVL_HIST={1:{},2:{},3:{}};
 let AUDIO=null;   // 单文件版内嵌的离线德语发音（{词key: dataURI}）
 let curMode='A', curOrder='seq', curScope='all';
-const APP_VERSION='1.8.2';   // 1.8.2：打开零词表、零提示，导入后才出现单词
+const APP_VERSION='1.8.3';   // 1.8.3：自动清理旧版内置数据；新增「清除本机词表」
 
 const $=id=>document.getElementById(id);
 
@@ -1573,6 +1574,14 @@ function loadAll(){
       },300);
     }
   }catch(e){}
+  // 隐私：清掉旧版「内置数据」被自动写进本机的内容（只清词表/解析，笔记、错词本、进度保留）
+  try{
+    const srcOld=LS.getItem(LS_SRC);
+    if(srcOld && /^内置数据/.test(srcOld)){
+      LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
+      LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
+    }
+  }catch(e){}
   // 优先用保存的原始词表文本，按最新解析器重新解析（代码更新后无需手动重新导入）
   try{
     const raw=LS.getItem(LS_RAW);
@@ -1585,13 +1594,8 @@ function loadAll(){
   if(!WORDS.length){
     try{ const raw=LS.getItem(LS_WORDS); if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr)&&arr.length) WORDS=arr; } }catch(e){}
   }
-  // 隐私：不再自动载入示例词表。没有词表就保持为空，必须由用户自己导入 .md
+  // 不再自动载入示例词表。没有词表就保持为空，必须由用户自己导入 .md
   if(!WORDS.length){ LS.removeItem(LS_SRC); }
-  // 旧版留下的「内置数据」来源标记：新版已无内置数据，改标记避免误解
-  try{
-    const srcOld=LS.getItem(LS_SRC);
-    if(srcOld && /^内置数据/.test(srcOld)) LS.setItem(LS_SRC,'本机保存（上次导入）');
-  }catch(e){}
   try{ const s=LS.getItem(LS_STATS); if(s) STATS=JSON.parse(s)||{}; }catch(e){}
   try{ const raw=LS.getItem(LS_DETAIL_RAW); if(raw) DETAILS=parseDetails(raw).map; }catch(e){}
   try{ const s=LS.getItem(LS_LVL); if(s) WRONG_LEVELS=JSON.parse(s)||{}; }catch(e){}
@@ -3005,6 +3009,15 @@ function doImport(){
   LS.setItem(LS_SRC, filesName($('impFile')));
   session=null; rebuildIndex(); closeImport(); renderAll();
 }
+function clearLocalWords(){
+  if(!confirm('清除本机保存的词表和解析？（笔记、错词本、学习进度都会保留）\n清除后需要重新导入词表/解析文件。')) return;
+  WORDS=[]; DETAILS={};
+  try{
+    LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
+    LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
+  }catch(e){}
+  session=null; rebuildIndex(); closeImport(); renderAll();
+}
 function loadSample(){
   if(!confirm('将丢弃当前词表，载入内置示例词表？学习进度保留。')) return;
   WORDS=parseWordList(SAMPLE_LIST).words;
@@ -3142,6 +3155,7 @@ function init(){
   $('btnCloseWrong').addEventListener('click',closeWrongBook);
   $('btnDoImport').addEventListener('click',doImport);
   $('btnSample').addEventListener('click',loadSample);
+  $('btnClearLocal').addEventListener('click',clearLocalWords);
   $('btnCancelImport').addEventListener('click',closeImport);
   $('impFile').addEventListener('change',function(e){ readFilesInto(e.target,'impText'); });
   $('btnNoteList').addEventListener('click',openNoteList);
