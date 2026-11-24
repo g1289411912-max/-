@@ -1527,7 +1527,7 @@ let DETAILS={};
 let WRONG_LEVELS={}, LVL_HIST={1:{},2:{},3:{}};
 let AUDIO=null;   // 单文件版内嵌的离线德语发音（{词key: dataURI}）
 let curMode='A', curOrder='seq', curScope='all';
-const APP_VERSION='1.8.0';   // 1.8.0：详解匹配大修（复数标注/冠词/+格标记/音标/标点/词形变化）；1.7.1：顶部「字号」四档调节
+const APP_VERSION='1.8.2';   // 1.8.2：打开零词表、零提示，导入后才出现单词
 
 const $=id=>document.getElementById(id);
 
@@ -1585,7 +1585,13 @@ function loadAll(){
   if(!WORDS.length){
     try{ const raw=LS.getItem(LS_WORDS); if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr)&&arr.length) WORDS=arr; } }catch(e){}
   }
-  if(!WORDS.length){ WORDS=parseWordList(SAMPLE_LIST).words; saveWords(); LS.removeItem(LS_SRC); }
+  // 隐私：不再自动载入示例词表。没有词表就保持为空，必须由用户自己导入 .md
+  if(!WORDS.length){ LS.removeItem(LS_SRC); }
+  // 旧版留下的「内置数据」来源标记：新版已无内置数据，改标记避免误解
+  try{
+    const srcOld=LS.getItem(LS_SRC);
+    if(srcOld && /^内置数据/.test(srcOld)) LS.setItem(LS_SRC,'本机保存（上次导入）');
+  }catch(e){}
   try{ const s=LS.getItem(LS_STATS); if(s) STATS=JSON.parse(s)||{}; }catch(e){}
   try{ const raw=LS.getItem(LS_DETAIL_RAW); if(raw) DETAILS=parseDetails(raw).map; }catch(e){}
   try{ const s=LS.getItem(LS_LVL); if(s) WRONG_LEVELS=JSON.parse(s)||{}; }catch(e){}
@@ -1688,7 +1694,7 @@ function setView(v){
 }
 function renderAll(){
   const src=LS.getItem(LS_SRC);
-  $('srcBadge').textContent=src?('词表：'+src):'示例词表（未导入）';
+  $('srcBadge').textContent = WORDS.length ? ('词表：'+(src||'本机')) : '';
   renderStrip();
   renderTasks();
   renderTimerAll();
@@ -1734,7 +1740,7 @@ function startSessionCustom(mode,idxList){
 }
 // —— 从指定词开始（顺序练到词表末尾） ——
 function openStartAt(){
-  if(!WORDS.length){ alert('词表为空，请先导入词表'); openImport(); return; }
+  if(!WORDS.length) return;   // 无词表时静默返回
   $('saFilter').value='';
   $('saMode').textContent={A:'德→中 · 选择',B:'德→中 · 自评',C:'中→德 · 拼写'}[curMode]||curMode;
   renderStartAtList();
@@ -1761,7 +1767,7 @@ function startFromWordAt(idx){
   renderCard();
 }
 function startFromSetup(){
-  if(!WORDS.length){ alert('词表为空，请先导入词表'); openImport(); return; }
+  if(!WORDS.length) return;   // 没有词表时静默不启动，不弹任何提示
   const n=parseInt($('inN').value,10)||10;
   startSession(curMode,curOrder,curScope,n);
 }
@@ -2575,6 +2581,7 @@ function closeCelebrate(){ $('celebrateModal').classList.add('hidden'); }
 // ---------- 选词练习 ----------
 let pickSel={};
 function openPick(){
+  if(!WORDS.length) return;   // 无词表时静默返回
   pickSel={};
   $('pkFilter').value='';
   renderPickList();
