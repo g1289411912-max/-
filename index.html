@@ -612,6 +612,7 @@ html.ts-4{--base-fs:25px;}
       <button class="btn primary" id="btnDoImport">导入</button>
       <button class="btn ghost" id="btnSample">载入示例词表（替换当前）</button>
       <button class="btn ghost" id="btnClearLocal">清除本机词表</button>
+      <button class="btn ghost sm" id="btnKeepMode" title="切换：打开页面时是否自动清空本机词表">自动清空：开</button>
       <button class="btn ghost" id="btnCancelImport">取消</button>
     </div>
   </div>
@@ -1506,6 +1507,7 @@ const LS_TIMER='deutsch.vocab.timer.v1';
 const LS_DAYMIN='deutsch.vocab.daymin.v1';
 const LS_WEEKMIN='deutsch.vocab.weekmin.v1';
 const LS_FONTSIZE='deutsch.vocab.fontsize.v1';
+const LS_KEEP='deutsch.vocab.keepLocal.v1';   // '1' = 关闭自动清空（保留本机词表）
 const SAMPLE_LIST=[
 '# 德语单词表（示例）',
 'an/schalten+A 开动;打开',
@@ -1528,7 +1530,7 @@ let DETAILS={};
 let WRONG_LEVELS={}, LVL_HIST={1:{},2:{},3:{}};
 let AUDIO=null;   // 单文件版内嵌的离线德语发音（{词key: dataURI}）
 let curMode='A', curOrder='seq', curScope='all';
-const APP_VERSION='1.8.5';   // 1.8.5：每次打开自动清空本机词表/解析，必须重新导入
+const APP_VERSION='1.8.6';   // 1.8.6：新增「自动清空」开关（默认开，可关为保留本机词表）
 
 const $=id=>document.getElementById(id);
 
@@ -1537,9 +1539,12 @@ function saveStats(){ try{ LS.setItem(LS_STATS,JSON.stringify(STATS)); }catch(e)
 function loadAll(){
   // 隐私：每次打开页面都清空本机保存的词表与解析，必须重新导入才出现单词
   //（笔记、错词本、学习进度、任务等全部保留）
+  // 若在「导入词表」里把「自动清空」关掉（保留本机词表），则跳过清理。
   try{
-    LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
-    LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
+    if(!isKeepMode()){
+      LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
+      LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
+    }
   }catch(e){}
   // —— 单文件版：读取页面内嵌的数据（词表/详解/语法笔记），stamp 变化时自动更新 ——
   try{
@@ -1697,6 +1702,7 @@ function setView(v){
 function renderAll(){
   const src=LS.getItem(LS_SRC);
   $('srcBadge').textContent = WORDS.length ? ('词表：'+(src||'本机')) : '';
+  try{ updateKeepBtn(); }catch(e){}
   renderStrip();
   renderTasks();
   renderTimerAll();
@@ -2985,7 +2991,7 @@ function filesName(input){
   if(!files || !files.length) return '（粘贴导入）';
   return Array.prototype.map.call(files,function(f){return f.name;}).join('、');
 }
-function openImport(){ $('impModal').classList.remove('hidden'); $('impText').value=''; $('impFile').value=''; }
+function openImport(){ $('impModal').classList.remove('hidden'); $('impText').value=''; $('impFile').value=''; try{ updateKeepBtn(); }catch(e){} }
 function closeImport(){ $('impModal').classList.add('hidden'); }
 function doImport(){
   const t=$('impText').value;
@@ -3006,6 +3012,17 @@ function doImport(){
   try{ LS.setItem(LS_RAW, t); }catch(e){}
   LS.setItem(LS_SRC, filesName($('impFile')));
   session=null; rebuildIndex(); closeImport(); renderAll();
+}
+// 「自动清空」开关：开（默认）= 每次打开清空本机词表，必须重新导入；关 = 保留本机词表
+function isKeepMode(){ try{ return LS.getItem(LS_KEEP)==='1'; }catch(e){ return false; } }
+function updateKeepBtn(){
+  const b=$('btnKeepMode'); if(!b) return;
+  b.textContent = isKeepMode() ? '自动清空：关（保留词表）' : '自动清空：开（每次重导）';
+  b.title = isKeepMode() ? '当前：保留本机词表，下次打开不用重新导入' : '当前：每次打开都清空本机词表，需重新导入';
+}
+function toggleKeepMode(){
+  try{ LS.setItem(LS_KEEP, isKeepMode()?'0':'1'); }catch(e){}
+  updateKeepBtn();
 }
 function clearLocalWords(){
   if(!confirm('清除本机保存的词表和解析？（笔记、错词本、学习进度都会保留）\n清除后需要重新导入词表/解析文件。')) return;
@@ -3154,6 +3171,7 @@ function init(){
   $('btnDoImport').addEventListener('click',doImport);
   $('btnSample').addEventListener('click',loadSample);
   $('btnClearLocal').addEventListener('click',clearLocalWords);
+  $('btnKeepMode').addEventListener('click',toggleKeepMode);
   $('btnCancelImport').addEventListener('click',closeImport);
   $('impFile').addEventListener('change',function(e){ readFilesInto(e.target,'impText'); });
   $('btnNoteList').addEventListener('click',openNoteList);
