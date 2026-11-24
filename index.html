@@ -1528,13 +1528,19 @@ let DETAILS={};
 let WRONG_LEVELS={}, LVL_HIST={1:{},2:{},3:{}};
 let AUDIO=null;   // 单文件版内嵌的离线德语发音（{词key: dataURI}）
 let curMode='A', curOrder='seq', curScope='all';
-const APP_VERSION='1.8.3';   // 1.8.3：自动清理旧版内置数据；新增「清除本机词表」
+const APP_VERSION='1.8.5';   // 1.8.5：每次打开自动清空本机词表/解析，必须重新导入
 
 const $=id=>document.getElementById(id);
 
 function saveWords(){ try{ LS.setItem(LS_WORDS,JSON.stringify(WORDS)); }catch(e){} }
 function saveStats(){ try{ LS.setItem(LS_STATS,JSON.stringify(STATS)); }catch(e){} }
 function loadAll(){
+  // 隐私：每次打开页面都清空本机保存的词表与解析，必须重新导入才出现单词
+  //（笔记、错词本、学习进度、任务等全部保留）
+  try{
+    LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
+    LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
+  }catch(e){}
   // —— 单文件版：读取页面内嵌的数据（词表/详解/语法笔记），stamp 变化时自动更新 ——
   try{
     const el=document.getElementById('embeddedData');
@@ -1572,14 +1578,6 @@ function loadAll(){
       setTimeout(function(){
         alert('检测到旧版词表缓存（缺少复数词尾信息，会导致拼写模式判分异常）。\n请点「导入词表 (.md)」重新选择你的词表文件一次即可修复，学习进度已保留。');
       },300);
-    }
-  }catch(e){}
-  // 隐私：清掉旧版「内置数据」被自动写进本机的内容（只清词表/解析，笔记、错词本、进度保留）
-  try{
-    const srcOld=LS.getItem(LS_SRC);
-    if(srcOld && /^内置数据/.test(srcOld)){
-      LS.removeItem(LS_WORDS); LS.removeItem(LS_RAW); LS.removeItem(LS_SRC);
-      LS.removeItem(LS_DETAIL_RAW); LS.removeItem(LS_DET_SRC);
     }
   }catch(e){}
   // 优先用保存的原始词表文本，按最新解析器重新解析（代码更新后无需手动重新导入）
